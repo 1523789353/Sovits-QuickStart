@@ -133,13 +133,10 @@ function resume_pack() {
 function checkout() {
     log_info "检查打包事务..."
     # 检查未正常结束的打包事务
-    log_debug "$(find "${sovits}" -maxdepth 1 -name "pack_*" -type d)"
     for dir_name in $(find "${sovits}" -maxdepth 1 -name "pack_*" -type d | grep -oE "pack_[0-9]+"); do
-        log_debug "检查打包事务: ${dir_name}"
-
         # 未正常结束打包的版本
         ver=$(echo "${dir_name}" | grep -oE "[0-9]+")
-        log_debug "检查打包事务: ${ver}"
+
         # 跳过不包含版本号的目录, 以及0版本
         if [[ ! -n "${ver}" || "${ver}" == "0" ]]; then
             continue;
