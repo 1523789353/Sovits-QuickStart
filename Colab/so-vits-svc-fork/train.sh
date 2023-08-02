@@ -37,8 +37,11 @@ function color() {
 function log() {
     echo -e "\n[$(color "purple")Packer$(color)][$(color "green")$(date '+%Y-%m-%d %H:%M:%S')$(color)]$*"
 }
+function log_debug() {
+    log "[$(color "cyan")Debug$(color)]: " "$@"
+}
 function log_info() {
-    log "[$(color "cyan")Info$(color)]: " "$@"
+    log "[$(color "blue")Info$(color)]: " "$@"
 }
 function log_warn() {
     log "[$(color "yellow")Warn$(color)]: " "$@"
@@ -113,26 +116,32 @@ function resume_pack() {
 
     # 备份所有模型
     model_bak="${sovits}/logs/44k_bak"
-    mv $model_dir $model_bak
-    # 仅拷贝打包版本模型
-    mkdir -p $model_dir
+    mv "${model_dir}" "${model_bak}"
+    # 仅保留打包版本模型
+    mkdir -p "${model_dir}"
     mv "${model_bak}/D_${pack_ver}.pth" "${model_dir}/"
     mv "${model_bak}/G_${pack_ver}.pth" "${model_dir}/"
     # 打包指定版本
     pack $pack_ver
     # 恢复所有模型
-    rm -rf $model_dir
-    mv $model_bak $model_dir
+    mv "${model_dir}/D_${pack_ver}.pth" "${model_bak}/"
+    mv "${model_dir}/G_${pack_ver}.pth" "${model_bak}/"
+    rm -rf "${model_dir}"
+    mv "${model_bak}" "${model_dir}"
 }
 
 function checkout() {
     log_info "检查打包事务..."
     # 检查未正常结束的打包事务
-    for dir_name in $(find "${sovits}" -maxdepth 1 -name "pack_*" -type d); do
+    log_debug "$(find "${sovits}" -maxdepth 1 -name "pack_*" -type d)"
+    for dir_name in $(find "${sovits}" -maxdepth 1 -name "pack_*" -type d | grep -oE "pack_[0-9]+"); do
+        log_debug "检查打包事务: ${dir_name}"
+
         # 未正常结束打包的版本
-        ver=$(echo $dir_name | grep -oE "[0-9]+")
+        ver=$(echo "${dir_name}" | grep -oE "[0-9]+")
+        log_debug "检查打包事务: ${ver}"
         # 跳过不包含版本号的目录, 以及0版本
-        if [[ -n "${ver}" || "${ver}" == "0" ]]; then
+        if [[ ! -n "${ver}" || "${ver}" == "0" ]]; then
             continue;
         fi
 
