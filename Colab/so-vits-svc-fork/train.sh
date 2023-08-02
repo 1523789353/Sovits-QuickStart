@@ -91,7 +91,7 @@ function pack() {
 
     # Step1: 训练并移动Cluster模型
     svc train-cluster
-    mv "${k_file}" "${output_dir}/kmeans_${target_ver}.pt"
+    mv "${k_file}" "${output_dir}/kmeans_${pack_ver}.pt"
 
     # Step2: 拷贝模型
     cp "${d_file}" "${output_dir}/"
