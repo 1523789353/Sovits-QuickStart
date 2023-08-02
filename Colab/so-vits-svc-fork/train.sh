@@ -35,19 +35,19 @@ function color() {
 
 # 打印日志函数, 前面添加新行(避免多线程问题), 并且添加进程和时间戳信息
 function log() {
-    echo -e "\n[$(color "purple")Packer$(color)][$(color "green")$(date '+%Y-%m-%d %H:%M:%S')$(color)]$*"
+    echo -e "\n[$(color purple)Packer$(color)][$(color green)$(date '+%Y-%m-%d %H:%M:%S')$(color)]$*"
 }
 function log_debug() {
-    log "[$(color "cyan")Debug$(color)]: " "$@"
+    log "[$(color cyan)Debug$(color)]: " "$@"
 }
 function log_info() {
-    log "[$(color "blue")Info$(color)]: " "$@"
+    log "[$(color blue)Info$(color)]: " "$@"
 }
 function log_warn() {
-    log "[$(color "yellow")Warn$(color)]: " "$@"
+    log "[$(color yellow)Warn$(color)]: " "$@"
 }
 function log_error() {
-    log "[$(color "red")Error$(color)]: " "$@" > /dev/stderr
+    log "[$(color red)Error$(color)]: " "$@" > /dev/stderr
 }
 
 
@@ -79,13 +79,13 @@ function pack() {
     output_dir="${sovits}/pack_${pack_ver}"
     output_file="${sovits}/pack_${pack_ver}.7z"
 
-    log_info "开始打包$(color "yellow")${pack_ver}$(color)版本模型..."
+    log_info "开始打包$(color yellow)${pack_ver}$(color)版本模型..."
 
     # 创建目录
     mkdir -p "${output_dir}"
 
     if [[ ! -f "${d_file}" && ! -f "${g_file}" ]]; then
-        log_error "$(color "red")模型文件不存在, 打包失败$(color)"
+        log_error "$(color red)模型文件不存在, 打包失败$(color)"
         return 1
     fi
 
@@ -108,7 +108,7 @@ function pack() {
         rm -rf "${output_dir}"
     fi
 
-    log_info "打包$(color "yellow")${pack_ver}$(color)版本模型完成"
+    log_info "打包$(color yellow)${pack_ver}$(color)版本模型完成"
 }
 
 function resume_pack() {
@@ -151,10 +151,10 @@ function checkout() {
             g_file="${model_dir}/G_${ver}.pth"
             if [[ -f "${d_file}" && -f "${g_file}" ]]; then
                 # 中断于Step1, 重新打包
-                log_info "找到$(color "yellow")${ver}$(color)版本的打包文件夹, 将继续打包..."
+                log_info "找到$(color yellow)${ver}$(color)版本的打包文件夹, 将继续打包..."
                 resume_pack $ver
             else
-                log_warn "找到$(color "yellow")${ver}$(color)版本的打包文件夹, 但是模型文件不存在"
+                log_warn "找到$(color yellow)${ver}$(color)版本的打包文件夹, 但是模型文件不存在"
                 log_warn "尝试删除${dir_path}文件夹来清除警告"
             fi
         fi
@@ -175,7 +175,7 @@ function listen() {
 
     # 等待模型更新
     until [[ -f "${d_file}" && -f "${g_file}" ]]; do
-        log_info "目标版本$(color "yellow")${target_ver}$(color), 等待模型更新..."
+        log_info "目标版本$(color yellow)${target_ver}$(color), 等待模型更新..."
         sleep 5s
     done
     # 休眠5s，等待模型保存
@@ -185,23 +185,34 @@ function listen() {
     pack $target_ver
 }
 
+svc_pid=0
+
 function main() {
     # 检查未完成的打包事务
     checkout
 
     # 训练模型
-    log_info "$(color "green")开始训练模型...$(color)"
+    log_info "$(color green)开始训练模型...$(color)"
     svc train & : # 后台运行
+    scv_pid=$!
 
     # 循环打包
     while true; do
         listen
         for i in {1..12}; do
-            log_info "冷却中...($(color "yellow")$((i * 5))s$(color)/$(color "red")60s$(color))"
+            log_info "冷却中...($(color yellow)$((i * 5))s$(color)/$(color red)60s$(color))"
             sleep 5s
         done
     done
 }
 
-trap 'log_info "收到退出信号, 终止进程(状态码: $?)"; exit' EXIT SIGINT SIGTERM
+function on_exit() {
+    log_info "收到退出信号, 终止进程(状态码: $?)"
+    if [ "${svc_pid}" != "0" ]; then
+        kill -9 ${svc_pid}
+    fi
+    exit 0
+}
+
+trap 'on_exit' EXIT SIGINT SIGTERM
 main "$@"
