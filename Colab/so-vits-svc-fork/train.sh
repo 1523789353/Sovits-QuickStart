@@ -145,18 +145,16 @@ function checkout() {
         # 目录绝对路径
         dir_path="${sovits}/${dir_name}"
 
-        # 检查目录中的kmeans_*文件, 如果不存在则...
-        if [ ! -f "${dir_path}/kmeans_${ver}.pt" ]; then
-            d_file="${model_dir}/D_${ver}.pth"
-            g_file="${model_dir}/G_${ver}.pth"
-            if [[ -f "${d_file}" && -f "${g_file}" ]]; then
-                # 中断于Step1, 重新打包
-                log_info "找到$(color yellow)${ver}$(color)版本的打包文件夹, 将继续打包..."
-                resume_pack $ver
-            else
-                log_warn "找到$(color yellow)${ver}$(color)版本的打包文件夹, 但是模型文件不存在"
-                log_warn "尝试删除${dir_path}文件夹来清除警告"
-            fi
+        log_info "找到$(color yellow)${ver}$(color)版本的打包文件夹\"${dir_path}\""
+
+        d_file="${model_dir}/D_${ver}.pth"
+        g_file="${model_dir}/G_${ver}.pth"
+        if [[ -f "${d_file}" && -f "${g_file}" ]]; then
+            log_info "找到$(color yellow)${ver}$(color)版本的模型文件, 将继续打包..."
+            resume_pack $ver
+        else
+            log_warn "模型文件不存在"
+            log_warn "尝试删除${dir_path}文件夹来清除警告"
         fi
     done
 }
