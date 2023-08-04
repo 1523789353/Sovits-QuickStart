@@ -5,69 +5,39 @@ model_dir="${sovits}/logs/44k"
 # 允许强制退出(0: 允许, 1: 不允许)
 allow_force_exit=0
 
-# 控制台输出染色
-# color <font_color> <bg_color>
-# Options:
-#     font_color: black, red, green, yellow, blue, purple, cyan, white, 其他值默认清除颜色
-#     bg_color: black, red, green, yellow, blue, purple, cyan, white, 其他值默认清除颜色
-function color() {
-    font_color=$1
-    bg_color=$2
+# 导入 colorful.sh (控制台染色)
+. ./colorful.sh
 
-    builder="\033["
-    case "${bg_color}" in
-    "black") builder+="40;" ;;
-    "red") builder+="41;" ;;
-    "green") builder+="42;" ;;
-    "yellow") builder+="43;" ;;
-    "blue") builder+="44;" ;;
-    "purple") builder+="45;" ;;
-    "cyan") builder+="46;" ;;
-    "white") builder+="47;" ;;
-    *) builder+="0;" ;;
-    esac
-    case "${font_color}" in
-    "black") builder+="30m" ;;
-    "red") builder+="31m" ;;
-    "green") builder+="32m" ;;
-    "yellow") builder+="33m" ;;
-    "blue") builder+="34m" ;;
-    "purple") builder+="35m" ;;
-    "cyan") builder+="36m" ;;
-    "white") builder+="37m" ;;
-    *) builder+="0m" ;;
-    esac
-    printf "${builder}"
-}
+
 
 log_level="info,warn,error"
 # 打印日志函数, 添加进程和时间戳信息, 并且在前面添加新行(避免与svc输出混合)
 function log() {
-    printf "\n[$(color purple)Packer$(color)][$(color green)$(date '+%Y-%m-%d %H:%M:%S')$(color)]$*\n"
+    printf "\n[$(SGR front_purple)Packer$(SGR)][$(SGR front_green)$(date '+%Y-%m-%d %H:%M:%S')$(SGR)]$*\n"
 }
 function log_debug() {
     if [[ ! "${log_level}" =~ "debug" ]]; then
         return
     fi
-    log "[$(color cyan)Debug$(color)]: " "$@"
+    log "[$(SGR front_cyan)Debug$(SGR)]: " "$@"
 }
 function log_info() {
     if [[ ! "${log_level}" =~ "info" ]]; then
         return
     fi
-    log "[$(color blue)Info$(color)]: " "$@"
+    log "[$(SGR front_blue)Info$(SGR)]: " "$@"
 }
 function log_warn() {
     if [[ ! "${log_level}" =~ "warn" ]]; then
         return
     fi
-    log "[$(color yellow)Warn$(color)]: " "$@"
+    log "[$(SGR front_yellow)Warn$(SGR)]: " "$@"
 }
 function log_error() {
     if [[ ! "${log_level}" =~ "error" ]]; then
         return
     fi
-    log "[$(color red)Error$(color)]: " "$@" >/dev/stderr
+    log "[$(SGR front_red)Error$(SGR)]: " "$@" >/dev/stderr
 }
 # 打印进度条, 注意输出都不会附带 换行/回车 (方便添加前后缀)
 function log_prog() {
@@ -76,18 +46,18 @@ function log_prog() {
     bar_length=$(($percent / 2))
 
     # 打印进度条前框, 以及文本染色
-    printf "[$(color green green)"
+    printf "[$(SGR front_green back_green)"
     for ((j = 0; j < $bar_length; j++)); do
         # 打印#号, 以应对终端不支持染色, 或进度条写入文件
         printf "#"
     done
     #清除染色
-    printf "$(color black black)"
+    printf "$(SGR front_black back_black)"
     for ((j = $bar_length; j < 50; j++)); do
         printf " "
     done
     # 打印进度条后框, 以及打印百分比
-    printf "$(color)] [$(color purple)%3d%%$(color)]" $percent
+    printf "$(SGR)] [$(SGR front_purple)%3d%%$(SGR)]" $percent
 }
 # 休眠进度条(每秒更新)
 function sleep_prog() {
@@ -120,6 +90,8 @@ function sleep_prog() {
     printf "\n"
 }
 
+
+
 # 获取当前模型版本
 function get_last_ver() {
     last_ver=0
@@ -149,13 +121,13 @@ function pack() {
     output_dir="${sovits}/pack_${pack_ver}"
     output_file="${sovits}/pack_${pack_ver}.7z"
 
-    log_info "开始打包$(color yellow)${pack_ver}$(color)版本模型..."
+    log_info "开始打包$(SGR front_yellow)${pack_ver}$(SGR)版本模型..."
 
     # 创建目录
     mkdir -p "${output_dir}/"
 
     if [[ ! -f "${d_file}" && ! -f "${g_file}" ]]; then
-        log_error "$(color red)模型文件不存在, 打包失败$(color)"
+        log_error "$(SGR front_red)模型文件不存在, 打包失败$(SGR)"
         return 1
     fi
 
@@ -178,7 +150,7 @@ function pack() {
 
     allow_force_exit=0
 
-    log_info "打包$(color yellow)${pack_ver}$(color)版本模型完成"
+    log_info "打包$(SGR front_yellow)${pack_ver}$(SGR)版本模型完成"
 }
 
 function resume_pack() {
@@ -211,19 +183,19 @@ function checkout() {
         ver=$(printf "${dir_name}" | grep -oE "[0-9]+")
 
         # 跳过不包含版本号的目录, 以及0版本
-        if [[ ! -n "${ver}" || "${ver}" == "0" ]]; then
+        if [[ -z "${ver}" || "${ver}" == "0" ]]; then
             continue
         fi
 
         # 目录绝对路径
         dir_path="${sovits}/${dir_name}"
 
-        log_info "找到$(color yellow)${ver}$(color)版本的打包文件夹\"${dir_path}/\""
+        log_info "找到$(SGR front_yellow)${ver}$(SGR)版本的打包文件夹\"${dir_path}/\""
 
         d_file="${model_dir}/D_${ver}.pth"
         g_file="${model_dir}/G_${ver}.pth"
         if [[ -f "${d_file}" && -f "${g_file}" ]]; then
-            log_info "找到$(color yellow)${ver}$(color)版本的模型文件, 将继续打包..."
+            log_info "找到$(SGR front_yellow)${ver}$(SGR)版本的模型文件, 将继续打包..."
             resume_pack $ver
         else
             log_warn "模型文件不存在"
@@ -246,7 +218,7 @@ function listen() {
 
     # 等待模型更新
     until [[ -f "${d_file}" && -f "${g_file}" ]]; do
-        log_info "目标版本$(color yellow)${target_ver}$(color), 等待模型更新..."
+        log_info "目标版本$(SGR front_yellow)${target_ver}$(SGR), 等待模型更新..."
         sleep 5s
     done
     # 休眠5s，等待模型保存
@@ -265,7 +237,7 @@ function main() {
     checkout
 
     # 训练模型
-    log_info "$(color green)开始训练模型...$(color)"
+    log_info "$(SGR front_green)开始训练模型...$(SGR)"
     # 后台训练模型
     svc train &
 
@@ -290,11 +262,11 @@ function on_exit() {
         exit 0
     else
         # 不允许强制退出
-        log_error "$(color red)收到退出信号, 但现仍有重要任务, 请耐心等待...$(color)"
+        log_error "$(SGR front_red)收到退出信号, 但现仍有重要任务, 请耐心等待...$(SGR)"
     fi
 }
 
-# 异常退出
+# 异常退出, debug时启用
 set -e
 # 退出时执行on_exit函数
 trap 'on_exit' EXIT SIGINT SIGTERM
